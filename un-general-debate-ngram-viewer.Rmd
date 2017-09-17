@@ -1,0 +1,195 @@
+---
+title: "UN General Debate NGram Viewer"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    # vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(shiny)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+# install_github('yaztheme', 'joshyazman')
+library(yaztheme)
+
+speech_years <- list()
+for(i in seq(1970,2016)){
+  speech_years[[i]] <- read.csv(paste0('speeches/speeches',i,'.csv'))
+}
+speeches <- bind_rows(speech_years)
+
+searchthrough <- function(term = '', text){
+  if(is.na(term) == TRUE){
+    0
+  } else if (term == ''){
+    0
+  } else {
+    ifelse(grepl(term, as.character(text), ignore.case=T),1,0)
+  }
+}
+
+```
+
+Sidebar {.sidebar}
+-----------------------------------------------------------------------
+
+### Enter Key Words/Phrases
+
+```{r}
+renderText("Enter up to 5 NGrams")
+textInput(inputId = 'a',
+            label = '1st NGram')
+textInput(inputId = 'b',
+            label = '2nd NGram')
+textInput(inputId = 'c',
+            label = '3rd NGram')
+textInput(inputId = 'd',
+            label = '4th NGram')
+textInput(inputId = 'e',
+            label = '5th NGram')
+renderText({'Citation:\nMikhaylov, Slava; Baturo, Alexander; Dasandi, Niheer, 2017, "United Nations General Debate Corpus", doi:10.7910/DVN/0TJX8Y, Harvard Dataverse, V3'})
+renderText({'App developed by Josh Yazman\njoshyazman@gmail.com\n@jyazman_2012'})
+```
+
+Rows {data-height=500}
+-----------------------------------------------------------------------
+
+<!-- ### Frequency of Words/Phrases Over Time -->
+
+```{r}
+
+# Take inputs and make line graph of their use over time
+viz.df <- reactive({
+  speeches%>%
+    mutate(a.flag = searchthrough(input$a, text),
+           b.flag = searchthrough(input$b, text),
+           c.flag = searchthrough(input$c, text),
+           d.flag = searchthrough(input$d, text),
+           e.flag = searchthrough(input$e, text))%>%
+    group_by(year)%>%
+    summarise(a = sum(a.flag),
+              b = sum(b.flag),
+              c = sum(c.flag),
+              d = sum(d.flag),
+              e = sum(e.flag))
+})
+
+renderPlot({
+  ggplot(viz.df())+
+  geom_line(aes(x = year, colour = '1st NGram',y = a),
+             size = 1, linetype = 'dashed')+
+  geom_point(aes(x = year, colour = '1st NGram', y = a), size = 2)+
+  geom_line(aes(color = '2nd NGram', x = year, y = b),
+            size = 1, linetype = 'dashed')+
+  geom_point(aes(x = year, colour = '2nd NGram', y = b), size = 2)+
+  geom_line(aes(x = year, colour = '3rd NGram', y = c),
+            size = 1, linetype = 'dashed')+
+  geom_point(aes(x = year, colour = '3rd NGram', y = c), size = 2)+
+  geom_line(aes(x = year, colour = '4th NGram', y = d),
+            size = 1, linetype = 'dashed')+
+  geom_point(aes(x = year, colour = '4th NGram', y = d), size = 2)+
+  geom_line(aes(x = year, colour = '5th NGram', y = e),
+            size = 1, linetype = 'dashed')+
+  geom_point(aes(x = year, colour = '5th NGram', y = e), size = 2)+
+  theme_yaz()+
+  labs(x = 'Year',
+       y = 'Frequency',
+       title = 'Frequency of Words/Phrases Over Time',
+       subtitle = 'Measured from the text of speeches given at the UN General Debate each year since 1970')+
+  scale_color_manual(values = yaz_cols,name = 'Key Words/Phrases Searched')
+}) 
+```
+
+
+Row {data-width = height}
+-------------------------------------
+   
+
+### 1st NGram Overall Use
+```{r}
+bar.df <- reactive({
+  speeches%>%
+    mutate(a.flag = searchthrough(input$a, text),
+           b.flag = searchthrough(input$b, text),
+           c.flag = searchthrough(input$c, text),
+           d.flag = searchthrough(input$d, text),
+           e.flag = searchthrough(input$e, text))%>%
+    group_by(country)%>%
+    summarise(a = sum(a.flag),
+              b = sum(b.flag),
+              c = sum(c.flag),
+              d = sum(d.flag),
+              e = sum(e.flag))
+})
+renderPlot({
+  ggplot(bar.df()%>%top_n(5, wt = a), 
+         aes(x = reorder(country,a), y = a))+
+    geom_bar(stat = 'identity', fill = "#922eb1")+
+    theme_yaz()+
+    coord_flip()+
+    labs(y = 'Frequency',
+         x = element_blank(),
+         title = element_blank())
+})
+```   
+ 
+### 2nd NGram Overall Use
+```{r}
+renderPlot({
+  ggplot(bar.df()%>%top_n(5, wt = b), 
+         aes(x = reorder(country,b), y = b))+
+    geom_bar(stat = 'identity', fill = "#99c66d")+
+    theme_yaz()+
+    coord_flip()+
+    labs(y = 'Frequency',
+         x = element_blank(),
+         title = element_blank())
+})
+```
+
+### 3rd NGram Overall Use
+```{r}
+renderPlot({
+  ggplot(bar.df()%>%top_n(5, wt = c), 
+         aes(x = reorder(country,c), y = c))+
+    geom_bar(stat = 'identity', fill = "#1f3ca6")+
+    theme_yaz()+
+    coord_flip()+
+    labs(y = 'Frequency',
+         x = element_blank(),
+         title = element_blank())
+})
+```   
+ 
+### 4th NGram Overall Use
+```{r}
+renderPlot({
+  ggplot(bar.df()%>%top_n(5, wt = d), 
+         aes(x = reorder(country,d), y = d))+
+    geom_bar(stat = 'identity', fill = "#4bd6fd")+
+    theme_yaz()+
+    coord_flip()+
+    labs(y = 'Frequency',
+         x = element_blank(),
+         title = element_blank())
+})
+```
+
+### 5th NGram Overall Use
+```{r}
+renderPlot({
+  ggplot(bar.df()%>%top_n(5, wt = e), 
+         aes(x = reorder(country,e), y = e))+
+    geom_bar(stat = 'identity', fill = "#214a65")+
+    theme_yaz()+
+    coord_flip()+
+    labs(y = 'Frequency',
+         x = element_blank(),
+         title = element_blank())
+})
+```   
+ 
